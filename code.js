@@ -3,6 +3,25 @@
  * @description A Figma plugin to find and select all hidden layers within the user's selection, or on the entire page if nothing is selected. Excludes components and instances.
  */
 
+// Helper function to check if a node is a component or instance (including nested ones)
+function isComponentOrInstance(node) {
+  // Check if the node itself is a component or instance
+  if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+    return true;
+  }
+  
+  // Check if any parent is a component or instance
+  let parent = node.parent;
+  while (parent) {
+    if (parent.type === 'COMPONENT' || parent.type === 'INSTANCE') {
+      return true;
+    }
+    parent = parent.parent;
+  }
+  
+  return false;
+}
+
 // This is the main function that runs when the plugin is executed.
 function huntHiddenLayers() {
   // --- 1. Determine the search scope ---
@@ -27,8 +46,7 @@ function huntHiddenLayers() {
   const hiddenLayers = searchNodes.flatMap(node => 
     node.findAll(child =>
       !child.visible &&
-      child.type !== 'COMPONENT' &&
-      child.type !== 'INSTANCE'
+      !isComponentOrInstance(child)
     )
   );
 
