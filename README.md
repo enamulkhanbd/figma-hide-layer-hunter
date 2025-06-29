@@ -1,7 +1,7 @@
 # Hide Layer Hunter for Figma
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/YourUsername/figma-hide-layer-hunter?style=for-the-badge)
-![GitHub license](https://img.shields.io/github/license/YourUsername/figma-hide-layer-hunter?style=for-the-badge)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/enamulkhanbd/figma-hide-layer-hunter?style=for-the-badge)
+![GitHub license](https://img.shields.io/github/license/enamulkhanbd/figma-hide-layer-hunter?style=for-the-badge)
 
 A simple but powerful Figma plugin to instantly find and select all hidden layers, helping you clean up your design files quickly and efficiently.
 
@@ -14,14 +14,11 @@ A simple but powerful Figma plugin to instantly find and select all hidden layer
 🚀 **Instant Cleanup:** Selects all hidden layers at once, so you can review and delete them in a single step.
 🔔 **Clear Notifications:** Tells you exactly how many hidden layers were found and where.
 
-![Hide Layer Hunter Demo](https://placehold.co/800x450/1e1e2e/ffffff?text=Add+a+GIF+of+your+plugin+in+action!)
-*To create a GIF, use a free tool like [ScreenToGif](https://www.screentogif.com/) or [Kap](https://getkap.co/) to record your screen while using the plugin.*
-
 ---
 
 ### Installation
 
-1.  Go to the **[Releases page](https://github.com/YourUsername/figma-hide-layer-hunter/releases)** on GitHub.
+1.  Go to the **[Releases page](https://github.com/enamulkhanbd/figma-hide-layer-hunter/releases)** on GitHub.
 2.  Under the latest release, download the `.zip` file (e.g., `Hide-Layer-Hunter-v1.0.0.zip`).
 3.  Unzip the downloaded file. You will have a folder containing `manifest.json` and `code.js`.
 4.  Open the Figma Desktop App.
@@ -48,7 +45,7 @@ Want to contribute or modify the code?
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/YourUsername/figma-hide-layer-hunter.git](https://github.com/YourUsername/figma-hide-layer-hunter.git)
+    git clone [https://github.com/enamulkhanbd/figma-hide-layer-hunter.git](https://github.com/enamulkhanbd/figma-hide-layer-hunter.git)
     ```
 2.  **Navigate to the folder:**
     ```bash
