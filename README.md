@@ -9,9 +9,9 @@ A simple but powerful Figma plugin to instantly find and select all hidden layer
 
 ### Key Features
 
-✨ **Context-Aware:** Works on your current selection. If nothing is selected, it scans the entire page.
-🎯 **Precise Selection:** Intelligently ignores hidden components and instances to protect your design system.
-🚀 **Instant Cleanup:** Selects all hidden layers at once, so you can review and delete them in a single step.
+✨ **Context-Aware:** Works on your current selection. If nothing is selected, it scans the entire page.</br>
+🎯 **Precise Selection:** Intelligently ignores hidden components and instances to protect your design system.</br>
+🚀 **Instant Cleanup:** Selects all hidden layers at once, so you can review and delete them in a single step.</br>
 🔔 **Clear Notifications:** Tells you exactly how many hidden layers were found and where.
 
 ---
