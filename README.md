@@ -39,23 +39,6 @@ The plugin will instantly select all the hidden layers it finds. You can then pr
 
 ---
 
-### For Developers (Building from Source)
-
-Want to contribute or modify the code?
-
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/enamulkhanbd/figma-hide-layer-hunter.git](https://github.com/enamulkhanbd/figma-hide-layer-hunter.git)
-    ```
-2.  **Navigate to the folder:**
-    ```bash
-    cd figma-hide-layer-hunter
-    ```
-3.  **Install in Figma:**
-    * Follow the installation steps above, but instead of a downloaded folder, use the cloned repository folder to import the `manifest.json`.
-
----
-
 ### License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
