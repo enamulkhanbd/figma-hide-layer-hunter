@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hide Layer Hunter - Figma Plugin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: The SPA is structured as a narrative landing page to guide users from awareness to action. It starts with a Hero section for immediate value proposition, followed by a scannable Features grid for quick understanding. A 'How It Works' section demystifies the process, building trust. The final CTA section provides a clear, actionable step. This linear flow is more intuitive for a new user than a dashboard and is designed to maximize plugin installations by making the information easy to consume and act upon. -->
+    <!-- Visualization & Content Choices: Report Info: Plugin features -> Goal: Inform/Compare -> Viz: Icon + Text Grid -> Interaction: Static -> Justification: Easily scannable, visually separates key benefits. | Report Info: Plugin usage flow -> Goal: Organize/Inform -> Viz: Numbered Stepper Diagram -> Interaction: Static -> Justification: Visually clarifies the process better than text alone. | Report Info: Installation link -> Goal: Action -> Viz: Prominent Button -> Interaction: Click -> Justification: Standard, effective CTA. All elements are created with HTML/Tailwind, confirming NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f7f4;
+            color: #333333;
+        }
+        .btn-primary {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .feature-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <main class="container mx-auto px-6 py-12 md:py-20">
+
+        <!-- Hero Section -->
+        <header id="home" class="text-center max-w-3xl mx-auto">
+            <h1 class="text-4xl md:text-6xl font-bold tracking-tight mb-4">
+                Stop hunting. Start finding.
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 mb-8">
+                Hide Layer Hunter is a simple but powerful Figma plugin to instantly find and select all hidden layers, helping you clean up your design files quickly and efficiently.
+            </p>
+            <a href="https://github.com/enamulkhanbd/figma-hide-layer-hunter/releases" target="_blank"
+               class="btn-primary inline-block bg-[#c78d6d] text-white font-bold py-3 px-8 rounded-lg text-lg">
+                Get Hide Layer Hunter
+            </a>
+        </header>
+
+        <!-- Features Section -->
+        <section id="features" class="py-20 md:py-28">
+             <div class="text-center max-w-3xl mx-auto mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Designed for a Faster Workflow</h2>
+                <p class="text-lg text-gray-600">This section introduces the core benefits of the plugin. Each feature is presented in a card to make it easy to digest, highlighting how it solves common frustrations in Figma and improves your design process.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                
+                <div class="feature-card bg-white/60 p-8 rounded-xl shadow-sm border border-gray-200/50">
+                    <div class="text-4xl mb-4">✨</div>
+                    <h3 class="text-xl font-bold mb-2">Context-Aware</h3>
+                    <p class="text-gray-600">Works on your current selection. If nothing is selected, it intelligently scans the entire page, giving you full control over the scope of your cleanup.</p>
+                </div>
+                
+                <div class="feature-card bg-white/60 p-8 rounded-xl shadow-sm border border-gray-200/50">
+                    <div class="text-4xl mb-4">🎯</div>
+                    <h3 class="text-xl font-bold mb-2">Precise Selection</h3>
+                    <p class="text-gray-600">Intelligently ignores hidden main components and instances to protect your design system from accidental changes. Clean with confidence.</p>
+                </div>
+
+                <div class="feature-card bg-white/60 p-8 rounded-xl shadow-sm border border-gray-200/50">
+                    <div class="text-4xl mb-4">🚀</div>
+                    <h3 class="text-xl font-bold mb-2">Instant Cleanup</h3>
+                    <p class="text-gray-600">Selects all matching hidden layers at once. Review your selection, and press a single key to delete. Tidying up your files has never been faster.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="py-20 md:py-28">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Simple Steps to a Cleaner File</h2>
+                 <p class="text-lg text-gray-600">To build confidence and show how easy the plugin is to use, this section visually breaks down the process. It shows the simple, interactive steps required to use the plugin, demonstrating its straightforward and user-friendly design.</p>
+            </div>
+            <div class="max-w-2xl mx-auto">
+                <div class="flex flex-col md:flex-row md:items-start space-y-8 md:space-y-0 md:space-x-8">
+                    
+                    <div class="flex-1 text-center">
+                        <div class="flex items-center justify-center w-16 h-16 mx-auto bg-[#c78d6d] text-white text-2xl font-bold rounded-full mb-4">1</div>
+                        <h3 class="text-xl font-semibold mb-2">Define Your Scope</h3>
+                        <p class="text-gray-600">Select a specific frame or group to search within, or select nothing to scan the entire page.</p>
+                    </div>
+                    
+                    <div class="hidden md:block self-center border-t-2 border-dashed border-gray-300 w-full mx-4 mt-8"></div>
+
+                    <div class="flex-1 text-center">
+                        <div class="flex items-center justify-center w-16 h-16 mx-auto bg-[#c78d6d] text-white text-2xl font-bold rounded-full mb-4">2</div>
+                        <h3 class="text-xl font-semibold mb-2">Run the Plugin</h3>
+                        <p class="text-gray-600">Open your Plugins menu and run "Hide Layer Hunter". It instantly finds and selects all matching hidden layers.</p>
+                    </div>
+
+                    <div class="hidden md:block self-center border-t-2 border-dashed border-gray-300 w-full mx-4 mt-8"></div>
+                    
+                    <div class="flex-1 text-center">
+                        <div class="flex items-center justify-center w-16 h-16 mx-auto bg-[#c78d6d] text-white text-2xl font-bold rounded-full mb-4">3</div>
+                        <h3 class="text-xl font-semibold mb-2">Review & Delete</h3>
+                        <p class="text-gray-600">All found layers are now selected. Simply inspect them in the layers panel and press the 'Delete' key to clean up.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA Section -->
+        <section id="get-started" class="text-center bg-white/60 py-20 rounded-xl shadow-sm border border-gray-200/50">
+            <div class="max-w-2xl mx-auto px-6">
+                <h2 class="text-3xl font-bold mb-4">Ready to Tidy Up Your Figma Files?</h2>
+                <p class="text-lg text-gray-600 mb-8">
+                    Get your free copy of Hide Layer Hunter from the GitHub repository and spend less time cleaning and more time designing.
+                </p>
+                <a href="https://github.com/enamulkhanbd/figma-hide-layer-hunter/releases" target="_blank"
+                   class="btn-primary inline-block bg-[#c78d6d] text-white font-bold py-3 px-8 rounded-lg text-lg">
+                    Download from GitHub
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-8">
+        <p class="text-gray-500">
+            A plugin by enamulkhanbd.
+            <a href="https://github.com/enamulkhanbd/figma-hide-layer-hunter" target="_blank" class="underline hover:text-[#c78d6d]">View Source on GitHub</a>
+        </p>
+    </footer>
+
+</body>
+</html>
