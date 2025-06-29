@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
     "name": "Hide Layer Hunter",
     "id": "137648991234567890",
@@ -5,4 +6,13 @@
     "main": "code.js",
     "editorType": ["figma"]
   }
+=======
+{
+    "name": "Hide Layer Hunter",
+    "id": "137648991234567890",
+    "api": "1.0.0",
+    "main": "code.js",
+    "editorType": ["figma"]
+  }
+>>>>>>> dc7349f539faa20062b2102840511aef54b38935
   
