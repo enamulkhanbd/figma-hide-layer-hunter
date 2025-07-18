@@ -82,6 +82,22 @@
         .layer-checkbox {
             margin-right: 8px;
         }
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #888;
+            padding: 0 4px;
+            opacity: 0.7;
+            transition: color 0.1s ease;
+        }
+        .unhide-btn:hover {
+            color: #0d99ff; /* Blue */
+        }
+        .delete-btn:hover {
+            color: #f44336; /* Red */
+        }
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -176,11 +192,7 @@
         function updateSelectAllCheckboxState() {
             const allCheckboxes = layerList.querySelectorAll('.layer-checkbox');
             const checkedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
-            if (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length) {
-                selectAllCheckbox.checked = true;
-            } else {
-                selectAllCheckbox.checked = false;
-            }
+            selectAllCheckbox.checked = (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length);
         }
 
         onmessage = (event) => {
@@ -201,6 +213,7 @@
                         listItem.innerHTML = `
                             <input type="checkbox" class="layer-checkbox">
                             <span class="layer-name" title="${layer.name}">${layer.name}</span>
+                            <button class="action-btn unhide-btn" title="Unhide Layer">👁️</button>
                         `;
                         layerList.appendChild(listItem);
                     });
@@ -227,29 +240,27 @@
             const listItem = target.closest('.layer-item');
             if (!listItem) return;
 
-            const checkbox = listItem.querySelector('.layer-checkbox');
-            if (target.type !== 'checkbox') {
-                 if (checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                 }
-            }
-            
-            if (checkbox) {
-                listItem.classList.toggle('selected', checkbox.checked);
-            }
-
-            updateDeleteButtonState();
-            updateSelectAllCheckboxState();
-
             const layerId = listItem.dataset.layerId;
-            if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
+
+            if (target.classList.contains('unhide-btn')) {
+                parent.postMessage({ pluginMessage: { type: 'unhide-layer', id: layerId }}, '*');
+            } else if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
                 parent.postMessage({ pluginMessage: { type: 'zoom-to-layer', id: layerId }}, '*');
+            } else {
+                const checkbox = listItem.querySelector('.layer-checkbox');
+                if (checkbox) {
+                    if (target.type !== 'checkbox') {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    listItem.classList.toggle('selected', checkbox.checked);
+                    updateDeleteButtonState();
+                    updateSelectAllCheckboxState();
+                }
             }
         });
 
         selectAllCheckbox.addEventListener('change', () => {
             const checkboxes = layerList.querySelectorAll('.layer-checkbox');
-            // Using a standard for-loop for robustness in the Figma plugin environment.
             for (let i = 0; i < checkboxes.length; i++) {
                 const checkbox = checkboxes[i];
                 checkbox.checked = selectAllCheckbox.checked;
