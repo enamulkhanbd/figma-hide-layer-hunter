@@ -46,6 +46,79 @@
             padding-bottom: 8px;
             border-bottom: 1px solid #e5e5e5;
         }
+        #list-controls label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0 8px;
+        }
+        /* Custom Checkbox Styles - Used for all checkboxes in the plugin */
+        .custom-checkbox {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .custom-checkbox input[type="checkbox"] {
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            margin: 0;
+            z-index: 2;
+            cursor: pointer;
+        }
+        .custom-checkbox .checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            border: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        /* Checked state: green background and border, white checkmark */
+        .custom-checkbox input[type="checkbox"]:checked ~ .checkmark {
+            background: #4caf4f;
+            border-color: #4caf4f;
+        }
+        .custom-checkbox input[type="checkbox"]:checked ~ .checkmark svg.check {
+            display: block;
+        }
+        /* Indeterminate state: green border, green dash */
+        .custom-checkbox input[type="checkbox"]:indeterminate ~ .checkmark {
+            background: #fff;
+            border-color: #4caf4f;
+        }
+        .custom-checkbox input[type="checkbox"]:indeterminate ~ .checkmark svg.dash {
+            display: block;
+        }
+        /* Hide SVGs by default, only show when checked/indeterminate */
+        .custom-checkbox .checkmark svg {
+            display: none;
+            width: 12px;
+            height: 12px;
+        }
+        .custom-checkbox .checkmark svg.check {
+            stroke: #fff;
+            stroke-width: 2;
+            fill: none;
+        }
+        .custom-checkbox .checkmark svg.dash {
+            stroke: #4caf4f;
+            stroke-width: 2;
+            fill: none;
+        }
+        /* End custom checkbox styles */
         #layer-list {
             list-style: none;
             padding: 0;
@@ -56,21 +129,16 @@
         .layer-item {
             display: flex;
             align-items: center;
-            padding: 6px 8px;
-            border-radius: 4px;
+            padding: 8px 8px;
+            border-radius: 2px;
             transition: background-color 0.1s ease;
-            border-top: 1px solid #e5e5e5;
+            /* border-top: 1px solid #e5e5e5; */
         }
         #list-controls + #layer-list .layer-item:first-child {
              border-top: none;
         }
         .layer-item.selected {
-            background-color: #e0e8ff;
-        }
-        .layer-item .icon {
-            margin-right: 8px;
-            opacity: 0.6;
-            cursor: pointer;
+            background-color: #e8f5e9;
         }
         .layer-name {
             flex-grow: 1;
@@ -82,21 +150,11 @@
         .layer-checkbox {
             margin-right: 8px;
         }
-        .action-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            color: #888;
-            padding: 0 4px;
-            opacity: 0.7;
-            transition: color 0.1s ease;
-        }
-        .unhide-btn:hover {
-            color: #0d99ff; /* Blue */
+        input[type="checkbox"]:layer-checked {
+            accent-color: #4caf4f;
         }
         .delete-btn:hover {
-            color: #f44336; /* Red */
+            color: #e53835; /* Red */
         }
         .empty-state {
             text-align: center;
@@ -126,11 +184,11 @@
             transition: background-color 0.1s ease;
         }
         #search-button {
-            background-color: #0d99ff;
+            background-color: #4CAF4F;
             color: white;
         }
         #search-button:hover {
-            background-color: #007acc;
+            background-color: #43a046;
         }
         #delete-selected-button {
             background-color: #f44336;
@@ -142,6 +200,20 @@
         #delete-selected-button:disabled {
             background-color: #e0e0e0;
             cursor: not-allowed;
+        }
+        .footer-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+        }
+        .footer-meta .team-name {
+            font-weight: 500;
+        }
+        .footer-meta .version {
+            font-style: italic;
         }
     </style>
 </head>
@@ -155,8 +227,15 @@
         </div>
         
         <div id="list-controls" style="display: none;">
-             <label style="display: flex; align-items: center; cursor: pointer; padding: 0 8px;">
-                <input type="checkbox" id="select-all" class="layer-checkbox"> Select All
+            <label>
+                <span class="custom-checkbox">
+                    <input type="checkbox" id="select-all" class="layer-checkbox">
+                    <span class="checkmark">
+                        <svg class="check" viewBox="0 0 20 20"><polyline points="5 11 9 15 15 7"/></svg>
+                        <svg class="dash" viewBox="0 0 20 20"><line x1="5" y1="10" x2="15" y2="10"/></svg>
+                    </span>
+                </span>
+                Select All
             </label>
         </div>
 
@@ -172,6 +251,10 @@
         <div class="button-group">
             <button id="search-button" class="button">Search Selection</button>
             <button id="delete-selected-button" class="button" disabled>Delete Selected</button>
+        </div>
+        <div class="footer-meta">
+            <span class="team-name">JustGo UX Team</span>
+            <span class="version">v2.0.1 Beta</span>
         </div>
     </div>
 
@@ -192,7 +275,35 @@
         function updateSelectAllCheckboxState() {
             const allCheckboxes = layerList.querySelectorAll('.layer-checkbox');
             const checkedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
-            selectAllCheckbox.checked = (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length);
+            if (allCheckboxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCheckboxes.length === allCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCheckboxes.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+           // Force redraw for custom checkbox
+           const checkmark = selectAllCheckbox.parentElement.querySelector('.checkmark');
+           if (selectAllCheckbox.indeterminate) {
+               selectAllCheckbox.classList.add('indeterminate');
+               // Forcibly set indeterminate property for custom styling
+               checkmark.querySelector('.check').style.display = 'none';
+               checkmark.querySelector('.dash').style.display = 'block';
+           } else if (selectAllCheckbox.checked) {
+               selectAllCheckbox.classList.remove('indeterminate');
+               checkmark.querySelector('.check').style.display = 'block';
+               checkmark.querySelector('.dash').style.display = 'none';
+           } else {
+               selectAllCheckbox.classList.remove('indeterminate');
+               checkmark.querySelector('.check').style.display = 'none';
+               checkmark.querySelector('.dash').style.display = 'none';
+           }
         }
 
         onmessage = (event) => {
@@ -205,13 +316,19 @@
                     listControls.style.display = 'block';
                     layerList.style.display = 'block';
                     const layerText = msg.layers.length === 1 ? 'layer' : 'layers';
-                    statusText.textContent = `Found ${msg.layers.length} top-level hidden ${layerText} ${msg.scope}.`;
+                    statusText.textContent = `Found ${msg.layers.length} hidden ${layerText} ${msg.scope}`;
                     msg.layers.forEach(layer => {
                         const listItem = document.createElement('li');
                         listItem.className = 'layer-item';
                         listItem.dataset.layerId = layer.id;
                         listItem.innerHTML = `
-                            <input type="checkbox" class="layer-checkbox">
+                            <span class="custom-checkbox">
+                                <input type="checkbox" class="layer-checkbox">
+                                <span class="checkmark">
+                                    <svg class="check" viewBox="0 0 20 20"><polyline points="5 11 9 15 15 7"/></svg>
+                                    <svg class="dash" viewBox="0 0 20 20"><line x1="5" y1="10" x2="15" y2="10"/></svg>
+                                </span>
+                            </span>
                             <span class="layer-name" title="${layer.name}">${layer.name}</span>
                         `;
                         layerList.appendChild(listItem);

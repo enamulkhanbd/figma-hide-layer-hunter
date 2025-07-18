@@ -1,44 +1,37 @@
-# Hide Layer Hunter for Figma
+# Hidden Layer Hunter for Figma
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/enamulkhanbd/figma-hide-layer-hunter?style=for-the-badge)
 ![GitHub license](https://img.shields.io/github/license/enamulkhanbd/figma-hide-layer-hunter?style=for-the-badge)
 
-A simple but powerful Figma plugin to instantly find and select all hidden layers, helping you clean up your design files quickly and efficiently.
+A simple but powerful Figma plugin to instantly find and manage all hidden layers, helping you clean up your design files quickly and efficiently.
 
 ---
 
 ### Key Features
 
-✨ **Context-Aware:** Works on your current selection. If nothing is selected, it scans the entire page.</br>
-🎯 **Precise Selection:** Intelligently ignores hidden components and instances to protect your design system.</br>
-🚀 **Instant Cleanup:** Selects all hidden layers at once, so you can review and delete them in a single step.</br>
+✨ **Context-Aware:** Works on your current selection. If nothing is selected, it scans the entire page.<br>
+🎯 **Precise Selection:** Intelligently ignores hidden components and instances to protect your design system.<br>
+🚀 **Instant Cleanup:** Review and delete hidden layers in a single step.<br>
 🔔 **Clear Notifications:** Tells you exactly how many hidden layers were found and where.
 
 ---
 
-### Installation
+## How to Use
 
-1.  Go to the **[Releases page](https://github.com/enamulkhanbd/figma-hide-layer-hunter/releases)** on GitHub.
-2.  Under the latest release, download the `.zip` file (e.g., `Hide-Layer-Hunter-v1.0.0.zip`).
-3.  Unzip the downloaded file. You will have a folder containing `manifest.json` and `code.js`.
-4.  Open the Figma Desktop App.
-5.  Go to the main menu and select **Plugins** > **Development** > **Import plugin from manifest...**.
-6.  Navigate to the unzipped folder and select the `manifest.json` file.
-
-Figma will install the plugin locally. You can now find "Hide Layer Hunter" in your Plugins menu!
+1. **Select a frame, group, or section** to scan for hidden layers, or leave nothing selected to scan the whole page.
+2. **Run Hide Layer Hunter** from the Figma Plugins menu.
+3. The plugin will display a list of all top-level hidden layers in your selection.
+4. **Zoom to any hidden layer** by clicking its name in the list. The plugin will briefly highlight the layer on the canvas without changing your selection.
+5. **Delete hidden layers** by selecting them in the list and clicking "Delete Selected".
+6. Use the "Search Selection" button to refresh the list after making changes.
 
 ---
 
-### How to Use
+## About
 
-1.  **To scan a specific area:** Select one or more frames, groups, or sections.
-2.  **To scan the whole page:** Make sure you have nothing selected.
-3.  Run the plugin from the **Plugins** menu.
-
-The plugin will instantly select all the hidden layers it finds. You can then press the `Delete` key to remove them or inspect them in the Layers panel.
+- **Team:** JustGo UX Team
+- **Version:** 2.0.1 Beta
 
 ---
-
-### License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
