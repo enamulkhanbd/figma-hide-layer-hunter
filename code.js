@@ -1,78 +1,101 @@
 /**
- * @name Hide Layer Hunter
- * @description A Figma plugin to find and select all hidden layers within the user's selection, or on the entire page if nothing is selected. Excludes components and instances.
+ * @name Hide Layer Hunter 2.0 - Code
+ * @description This is the "backend" of the plugin. It finds hidden layers
+ * and communicates with the UI.
  */
 
-// Helper function to check if a node is a component or instance (including nested ones)
-function isComponentOrInstance(node) {
-  // Check if the node itself is a component or instance
-  if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
-    return true;
-  }
-  
-  // Check if any parent is a component or instance
-  let parent = node.parent;
-  while (parent) {
-    if (parent.type === 'COMPONENT' || parent.type === 'INSTANCE') {
-      return true;
-    }
-    parent = parent.parent;
-  }
-  
-  return false;
-}
+// Show the UI when the plugin is run.
+figma.showUI(__html__, { width: 280, height: 450 });
 
-// This is the main function that runs when the plugin is executed.
-function huntHiddenLayers() {
-  // --- 1. Determine the search scope ---
+// --- Function to find hidden layers ---
+function findHiddenLayers() {
   const selection = figma.currentPage.selection;
-  let searchNodes;
-  let scopeDescription;
 
-  if (selection.length > 0) {
-    // If the user has selected one or more items, search within them.
-    searchNodes = selection;
-    scopeDescription = "in your selection";
-  } else {
-    // If nothing is selected, search the entire page.
-    // We put the page in an array to keep the logic consistent.
-    searchNodes = [figma.currentPage];
-    scopeDescription = "on this page";
+  // If nothing is selected, send a message to the UI to show a prompt.
+  if (selection.length === 0) {
+    figma.ui.postMessage({ type: 'prompt-selection' });
+    return; // Stop the function here.
+  }
+  
+  // If something is selected, proceed with the search.
+  const searchNodes = selection;
+  const scopeDescription = "in your selection";
+  
+  // Use a standard for-loop which is more robust than reduce/flatMap with the Figma API.
+  let allExplicitlyHidden = [];
+  for (const node of searchNodes) {
+      const found = node.findAll(n => !n.visible && n.type !== 'COMPONENT' && n.type !== 'INSTANCE');
+      for (const item of found) {
+          allExplicitlyHidden.push(item);
+      }
   }
 
-  // --- 2. Find all hidden layers within the determined scope ---
-  // We use `flatMap` to iterate through our search nodes (either the selection or the page)
-  // and then run `findAll` on each one, collecting all results into a single array.
-  const hiddenLayers = searchNodes.flatMap(node => 
-    node.findAll(child =>
-      !child.visible &&
-      !isComponentOrInstance(child)
-    )
+  const hiddenSelectedNodes = searchNodes.filter(n =>
+    !n.visible && n.type !== 'COMPONENT' && n.type !== 'INSTANCE' && n.id !== figma.currentPage.id
   );
 
-  const count = hiddenLayers.length;
+  const allHiddenNodes = [...hiddenSelectedNodes, ...allExplicitlyHidden];
+  const uniqueHiddenNodesMap = new Map(allHiddenNodes.map(node => [node.id, node]));
+  
+  const hiddenIds = new Set(uniqueHiddenNodesMap.keys());
 
-  // --- 3. Select layers and notify the user ---
-  if (count > 0) {
-    // If we found one or more hidden layers:
+  const topLevelHiddenLayers = [];
+  for (const node of uniqueHiddenNodesMap.values()) {
+    let isTopLevel = true;
+    let parent = node.parent;
     
-    // a) Select them in the Layers panel.
-    figma.currentPage.selection = hiddenLayers;
+    while (parent && parent.id !== figma.currentPage.id) {
+      if (hiddenIds.has(parent.id)) {
+        isTopLevel = false;
+        break;
+      }
+      parent = parent.parent;
+    }
 
-    // b) Create a user-friendly message.
-    const layerText = count === 1 ? 'layer' : 'layers';
-    
-    // c) Show a toast notification with the correct scope.
-    figma.notify(`Found and selected ${count} hidden ${layerText} ${scopeDescription}`, { timeout: 5000 });
-
-  } else {
-    // If no hidden layers were found, let the user know, specifying the scope.
-    figma.notify(`No hidden layers found ${scopeDescription}`, { timeout: 5000 });
+    if (isTopLevel) {
+      topLevelHiddenLayers.push(node);
+    }
   }
 
-  // --- 4. Close the plugin ---
-  figma.closePlugin();
+  const layerData = topLevelHiddenLayers.map(layer => ({
+    id: layer.id,
+    name: layer.name
+  }));
+
+  figma.ui.postMessage({
+    type: 'render-layers',
+    layers: layerData,
+    scope: scopeDescription
+  });
 }
 
-// Execute the main function.
-huntHiddenLayers();
+// --- Listen for messages from the UI ---
+figma.ui.onmessage = msg => {
+  if (msg.type === 'zoom-to-layer') {
+    const nodeToZoom = figma.getNodeById(msg.id);
+    if (nodeToZoom) {
+      figma.currentPage.selection = [nodeToZoom];
+      figma.viewport.scrollAndZoomIntoView([nodeToZoom]);
+    }
+  } else if (msg.type === 'search-again') {
+    findHiddenLayers();
+  } else if (msg.type === 'delete-selected') {
+    const idsToDelete = msg.ids;
+    if (idsToDelete && idsToDelete.length > 0) {
+        let deletedCount = 0;
+        idsToDelete.forEach(id => {
+            const nodeToDelete = figma.getNodeById(id);
+            if (nodeToDelete && !nodeToDelete.removed) {
+                nodeToDelete.remove();
+                deletedCount++;
+            }
+        });
+        figma.notify(`Deleted ${deletedCount} layer(s).`);
+        findHiddenLayers();
+    }
+  }
+};
+
+// --- Initial run ---
+// Run the check as soon as the plugin starts.
+findHiddenLayers();

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body, html {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .container {
+            padding: 12px;
+            flex-grow: 1;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #header h1 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+        }
+        #status {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+        #list-controls {
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        #layer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background-color 0.1s ease;
+            border-top: 1px solid #e5e5e5;
+        }
+        #list-controls + #layer-list .layer-item:first-child {
+             border-top: none;
+        }
+        .layer-item.selected {
+            background-color: #e0e8ff;
+        }
+        .layer-item .icon {
+            margin-right: 8px;
+            opacity: 0.6;
+            cursor: pointer;
+        }
+        .layer-name {
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .layer-checkbox {
+            margin-right: 8px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #888;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .footer {
+            padding: 12px;
+            border-top: 1px solid #e5e5e5;
+            flex-shrink: 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+        .button {
+            flex-grow: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        #search-button {
+            background-color: #0d99ff;
+            color: white;
+        }
+        #search-button:hover {
+            background-color: #007acc;
+        }
+        #delete-selected-button {
+            background-color: #f44336;
+            color: white;
+        }
+        #delete-selected-button:hover {
+            background-color: #d32f2f;
+        }
+        #delete-selected-button:disabled {
+            background-color: #e0e0e0;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="header">
+            <div class="header-top">
+                <h1>Hidden Layers</h1>
+            </div>
+            <p id="status">Ready to search</p>
+        </div>
+        
+        <div id="list-controls" style="display: none;">
+             <label style="display: flex; align-items: center; cursor: pointer; padding: 0 8px;">
+                <input type="checkbox" id="select-all" class="layer-checkbox"> Select All
+            </label>
+        </div>
+
+        <ul id="layer-list" style="display: none;">
+            <!-- Layer items will be dynamically inserted here -->
+        </ul>
+        <div id="empty-state" style="display: none;">
+            <p>Please select a frame, section, or group to start.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="button-group">
+            <button id="search-button" class="button">Search Selection</button>
+            <button id="delete-selected-button" class="button" disabled>Delete Selected</button>
+        </div>
+    </div>
+
+    <script>
+        const layerList = document.getElementById('layer-list');
+        const statusText = document.getElementById('status');
+        const emptyState = document.getElementById('empty-state');
+        const searchButton = document.getElementById('search-button');
+        const deleteSelectedButton = document.getElementById('delete-selected-button');
+        const selectAllCheckbox = document.getElementById('select-all');
+        const listControls = document.getElementById('list-controls');
+
+        function updateDeleteButtonState() {
+            const selectedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
+            deleteSelectedButton.disabled = selectedCheckboxes.length === 0;
+        }
+
+        function updateSelectAllCheckboxState() {
+            const allCheckboxes = layerList.querySelectorAll('.layer-checkbox');
+            const checkedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
+            if (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.checked = false;
+            }
+        }
+
+        onmessage = (event) => {
+            const msg = event.data.pluginMessage;
+            if (msg.type === 'render-layers') {
+                layerList.innerHTML = '';
+                selectAllCheckbox.checked = false;
+                if (msg.layers.length > 0) {
+                    emptyState.style.display = 'none';
+                    listControls.style.display = 'block';
+                    layerList.style.display = 'block';
+                    const layerText = msg.layers.length === 1 ? 'layer' : 'layers';
+                    statusText.textContent = `Found ${msg.layers.length} top-level hidden ${layerText} ${msg.scope}.`;
+                    msg.layers.forEach(layer => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'layer-item';
+                        listItem.dataset.layerId = layer.id;
+                        listItem.innerHTML = `
+                            <input type="checkbox" class="layer-checkbox">
+                            <span class="layer-name" title="${layer.name}">${layer.name}</span>
+                        `;
+                        layerList.appendChild(listItem);
+                    });
+                } else {
+                    statusText.textContent = `No hidden layers found in your selection.`;
+                    layerList.style.display = 'none';
+                    listControls.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    emptyState.querySelector('p').textContent = '👍 No hidden layers found.';
+                }
+                updateDeleteButtonState();
+            } else if (msg.type === 'prompt-selection') {
+                statusText.textContent = 'Ready to search';
+                layerList.style.display = 'none';
+                listControls.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.querySelector('p').textContent = 'Please select a frame, section, or group to start.';
+                updateDeleteButtonState();
+            }
+        };
+
+        layerList.addEventListener('click', (event) => {
+            const target = event.target;
+            const listItem = target.closest('.layer-item');
+            if (!listItem) return;
+
+            const checkbox = listItem.querySelector('.layer-checkbox');
+            if (target.type !== 'checkbox') {
+                 if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                 }
+            }
+            
+            if (checkbox) {
+                listItem.classList.toggle('selected', checkbox.checked);
+            }
+
+            updateDeleteButtonState();
+            updateSelectAllCheckboxState();
+
+            const layerId = listItem.dataset.layerId;
+            if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
+                parent.postMessage({ pluginMessage: { type: 'zoom-to-layer', id: layerId }}, '*');
+            }
+        });
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const checkboxes = layerList.querySelectorAll('.layer-checkbox');
+            // Using a standard for-loop for robustness in the Figma plugin environment.
+            for (let i = 0; i < checkboxes.length; i++) {
+                const checkbox = checkboxes[i];
+                checkbox.checked = selectAllCheckbox.checked;
+                const listItem = checkbox.closest('.layer-item');
+                if (listItem) {
+                    listItem.classList.toggle('selected', selectAllCheckbox.checked);
+                }
+            }
+            updateDeleteButtonState();
+        });
+
+        searchButton.addEventListener('click', () => {
+            statusText.textContent = 'Searching...';
+            parent.postMessage({ pluginMessage: { type: 'search-again' }}, '*');
+        });
+
+        deleteSelectedButton.addEventListener('click', () => {
+            const selectedIds = Array.from(layerList.querySelectorAll('.layer-checkbox:checked'))
+                                     .map(cb => cb.closest('.layer-item').dataset.layerId);
+            parent.postMessage({ pluginMessage: { type: 'delete-selected', ids: selectedIds }}, '*');
+        });
+    </script>
+</body>
+</html>
