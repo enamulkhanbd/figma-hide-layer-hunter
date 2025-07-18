@@ -74,8 +74,12 @@ figma.ui.onmessage = msg => {
   if (msg.type === 'zoom-to-layer') {
     const nodeToZoom = figma.getNodeById(msg.id);
     if (nodeToZoom) {
+      const previousSelection = figma.currentPage.selection;
       figma.currentPage.selection = [nodeToZoom];
       figma.viewport.scrollAndZoomIntoView([nodeToZoom]);
+      setTimeout(() => {
+        figma.currentPage.selection = previousSelection;
+      }, 500); // 0.5 second highlight
     }
   } else if (msg.type === 'search-again') {
     findHiddenLayers();

@@ -213,7 +213,6 @@
                         listItem.innerHTML = `
                             <input type="checkbox" class="layer-checkbox">
                             <span class="layer-name" title="${layer.name}">${layer.name}</span>
-                            <button class="action-btn unhide-btn" title="Unhide Layer">👁️</button>
                         `;
                         layerList.appendChild(listItem);
                     });
@@ -242,9 +241,7 @@
 
             const layerId = listItem.dataset.layerId;
 
-            if (target.classList.contains('unhide-btn')) {
-                parent.postMessage({ pluginMessage: { type: 'unhide-layer', id: layerId }}, '*');
-            } else if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
+            if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
                 parent.postMessage({ pluginMessage: { type: 'zoom-to-layer', id: layerId }}, '*');
             } else {
                 const checkbox = listItem.querySelector('.layer-checkbox');
