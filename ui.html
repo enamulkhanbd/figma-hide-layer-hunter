@@ -1,401 +1,380 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body, html {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        .container {
-            padding: 12px;
-            flex-grow: 1;
-            overflow-y: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        #header {
-            padding-bottom: 8px;
-            margin-bottom: 8px;
-            flex-shrink: 0;
-        }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #header h1 {
-            font-size: 14px;
-            font-weight: 600;
-            margin: 0;
-        }
-        #status {
-            font-size: 11px;
-            color: #888;
-            margin-top: 4px;
-        }
-        #list-controls {
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e5e5e5;
-        }
-        #list-controls label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            padding: 0 8px;
-        }
-        /* Custom Checkbox Styles - Used for all checkboxes in the plugin */
-        .custom-checkbox {
-            position: relative;
-            width: 12px;
-            height: 12px;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .custom-checkbox input[type="checkbox"] {
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            left: 0;
-            top: 0;
-            margin: 0;
-            z-index: 2;
-            cursor: pointer;
-        }
-        .custom-checkbox .checkmark {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #fff;
-            border-radius: 6px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-            border: 2px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        /* Checked state: green background and border, white checkmark */
-        .custom-checkbox input[type="checkbox"]:checked ~ .checkmark {
-            background: #4caf4f;
-            border-color: #4caf4f;
-        }
-        .custom-checkbox input[type="checkbox"]:checked ~ .checkmark svg.check {
-            display: block;
-        }
-        /* Indeterminate state: green border, green dash */
-        .custom-checkbox input[type="checkbox"]:indeterminate ~ .checkmark {
-            background: #fff;
-            border-color: #4caf4f;
-        }
-        .custom-checkbox input[type="checkbox"]:indeterminate ~ .checkmark svg.dash {
-            display: block;
-        }
-        /* Hide SVGs by default, only show when checked/indeterminate */
-        .custom-checkbox .checkmark svg {
-            display: none;
-            width: 12px;
-            height: 12px;
-        }
-        .custom-checkbox .checkmark svg.check {
-            stroke: #fff;
-            stroke-width: 2;
-            fill: none;
-        }
-        .custom-checkbox .checkmark svg.dash {
-            stroke: #4caf4f;
-            stroke-width: 2;
-            fill: none;
-        }
-        /* End custom checkbox styles */
-        #layer-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            overflow-y: auto;
-            flex-grow: 1;
-        }
-        .layer-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 8px;
-            border-radius: 2px;
-            transition: background-color 0.1s ease;
-            /* border-top: 1px solid #e5e5e5; */
-        }
-        #list-controls + #layer-list .layer-item:first-child {
-             border-top: none;
-        }
-        .layer-item.selected {
-            background-color: #e8f5e9;
-        }
-        .layer-name {
-            flex-grow: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-        .layer-checkbox {
-            margin-right: 8px;
-        }
-        input[type="checkbox"]:layer-checked {
-            accent-color: #4caf4f;
-        }
-        .delete-btn:hover {
-            color: #e53835; /* Red */
-        }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #888;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .footer {
-            padding: 12px;
-            border-top: 1px solid #e5e5e5;
-            flex-shrink: 0;
-        }
-        .button-group {
-            display: flex;
-            gap: 8px;
-        }
-        .button {
-            flex-grow: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.1s ease;
-        }
-        #search-button {
-            background-color: #4CAF4F;
-            color: white;
-        }
-        #search-button:hover {
-            background-color: #43a046;
-        }
-        #delete-selected-button {
-            background-color: #f44336;
-            color: white;
-        }
-        #delete-selected-button:hover {
-            background-color: #d32f2f;
-        }
-        #delete-selected-button:disabled {
-            background-color: #e0e0e0;
-            cursor: not-allowed;
-        }
-        .footer-meta {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 8px;
-        }
-        .footer-meta .team-name {
-            font-weight: 500;
-        }
-        .footer-meta .version {
-            font-style: italic;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Hidden Layer Finder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Inter global -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#ffffff; --fg:#111111; --muted:#6b7280; --border:#e5e7eb;
+      --hover:rgba(0,0,0,.06); --hover2:rgba(0,0,0,.08); --accent:#3b82f6;
+      --danger:#ef4444;
+
+      --gutter-x: 12px;
+
+      --chk-size: 20px;
+      --chk-hit-x: 6px;
+      --chk-hit-y: 2px;
+      --chk-gap: 4px;
+    }
+
+    *{
+      font-family:'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    html,body{
+      margin:0; padding:0; background:var(--bg); color:var(--fg);
+      font-size:14px; line-height:20px;
+    }
+
+    /* prevent text selection drag */
+    html, body, .wrap, header, .toolbar, .list, .layer-row, .chk-wrap, .layer-name, .btn, .target-btn {
+      -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+    }
+    input[type="text"], input[type="search"], textarea { user-select: text; }
+
+    .wrap{display:flex; flex-direction:column; height:100vh; min-height:480px;}
+
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px var(--gutter-x); border-bottom:1px solid var(--border); gap:4px;
+    }
+    header h1{font-size:14px; font-weight:600; margin:0;}
+
+    .btn{
+      display:inline-flex; align-items:center; gap:4px;
+      border:1px solid var(--border); background:#fff;
+      padding:6px 10px; border-radius:8px; cursor:pointer; user-select:none;
+      font-size:14px; font-weight:500;
+    }
+    /* keep your disabled button look */
+    .btn[disabled]{opacity:.5; cursor:not-allowed;}
+    .btn svg{width:16px; height:16px;}
+
+    .toolbar{
+      display:flex; align-items:center; gap:16px;
+      padding:8px var(--gutter-x);
+      border-bottom:1px solid var(--border); flex-wrap:wrap;
+    }
+
+    .empty{padding:16px var(--gutter-x); color:var(--muted);}
+    .list{padding:4px var(--gutter-x) 12px var(--gutter-x); overflow:auto; flex:1 1 auto;}
+
+    /* rows: no global hover; only target icon hovers */
+    .layer-row{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:4px; padding:6px 0;
+      border-radius:8px;
+    }
+
+    .layer-left{ display:flex; align-items:center; min-width:0; flex:1 1 auto; }
+
+    .chk-wrap{
+      display:inline-flex; align-items:center; gap:var(--chk-gap);
+      padding: var(--chk-hit-y) var(--chk-hit-x) var(--chk-hit-y) 0;
+      border-radius:6px; cursor:pointer; min-width:0;
+    }
+
+    .chk{ position:absolute; opacity:0; width:0; height:0; margin:0; padding:0; }
+
+    .chk-icon{
+      width:var(--chk-size); height:var(--chk-size);
+      display:inline-flex; align-items:center; justify-content:center;
+      line-height:1; flex:0 0 auto;
+    }
+    .chk-icon svg{ width:100%; height:100%; display:block; }
+
+    .chk-icon .icon-checked{ display:none; }
+    .chk-icon .icon-indet{ display:none; }
+
+    .chk:checked + .chk-icon .icon-unchecked{ display:none; }
+    .chk:checked + .chk-icon .icon-checked{ display:block; }
+
+    .chk:indeterminate + .chk-icon .icon-unchecked{ display:none; }
+    .chk:indeterminate + .chk-icon .icon-checked{ display:none; }
+    .chk:indeterminate + .chk-icon .icon-indet{ display:block; }
+
+    .chk:focus-visible + .chk-icon{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+    .layer-name{
+      font-size: 14px; font-weight: 500;
+      min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      flex:1 1 auto;
+    }
+
+    .target-btn{
+      flex:0 0 auto; border:none; background:transparent; padding:6px;
+      border-radius:6px; cursor:pointer;
+    }
+    .target-btn:hover{ background:var(--hover2); }
+    .target-btn svg{width:18px; height:18px; display:block;}
+
+    /* NEW: make Select-all look disabled like the Delete button */
+    #selectAllWrap.is-disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+    #selectAllWrap.is-disabled .chk-icon,
+    #selectAllWrap.is-disabled .layer-name{
+      pointer-events:none;
+    }
+    /* In addition, when the real input is disabled, dim its visuals */
+    #selectAllWrap .chk:disabled + .chk-icon{ opacity:.6; }
+    #selectAllWrap .chk:disabled + .chk-icon + .layer-name{ color:var(--muted); }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div id="header">
-            <div class="header-top">
-                <h1>Hidden Layers</h1>
-            </div>
-            <p id="status">Ready to search</p>
-        </div>
-        
-        <div id="list-controls" style="display: none;">
-            <label>
-                <span class="custom-checkbox">
-                    <input type="checkbox" id="select-all" class="layer-checkbox">
-                    <span class="checkmark">
-                        <svg class="check" viewBox="0 0 20 20"><polyline points="5 11 9 15 15 7"/></svg>
-                        <svg class="dash" viewBox="0 0 20 20"><line x1="5" y1="10" x2="15" y2="10"/></svg>
-                    </span>
-                </span>
-                Select All
+  <div class="wrap">
+    <header>
+      <h1>Hidden Layer Finder</h1>
+      <button id="scanBtn" class="btn" title="Scan selection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+          <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+        </svg>
+        <span id="scanBtnLabel">Scan</span>
+      </button>
+    </header>
+
+    <div class="toolbar">
+      <!-- Select all (tri-state). Starts disabled; JS toggles after user scans & 2+ items -->
+      <label class="chk-wrap is-disabled" id="selectAllWrap" title="Select all hidden layers">
+        <input class="chk" type="checkbox" id="chkAll" aria-label="Select all hidden layers" disabled />
+        <span class="chk-icon" aria-hidden="true">
+          <!-- Unchecked -->
+          <svg class="icon-unchecked" viewBox="0 0 24 24" fill="none">
+            <path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5ZM5 19H19V5H5V19Z" fill="#000"/>
+          </svg>
+          <!-- Checked -->
+          <svg class="icon-checked" viewBox="0 0 24 24" fill="none">
+            <path d="M10.6 13.4L8.45 11.25C8.26667 11.0667 8.03333 10.975 7.75 10.975C7.46667 10.975 7.23333 11.0667 7.05 11.25C6.86667 11.4333 6.775 11.6667 6.775 11.95C6.775 12.2333 6.86667 12.4667 7.05 12.65L9.9 15.5C10.1 15.7 10.3333 15.8 10.6 15.8C10.8667 15.8 11.1 15.7 11.3 15.5L16.95 9.85C17.1333 9.66667 17.225 9.43333 17.225 9.15C17.225 8.86667 17.1333 8.63333 16.95 8.45C16.7667 8.26667 16.5333 8.175 16.25 8.175C15.9667 8.175 15.7333 8.26667 15.55 8.45L10.6 13.4ZM5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5Z" fill="#4caf4f"/>
+          </svg>
+          <!-- Indeterminate -->
+          <svg class="icon-indet" viewBox="0 0 24 25" fill="none">
+            <path d="M8 13.5H16C16.2833 13.5 16.5208 13.4042 16.7125 13.2125C16.9042 13.0208 17 12.7833 17 12.5C17 12.2167 16.9042 11.9792 16.7125 11.7875C16.5208 11.5958 16.2833 11.5 16 11.5H8C7.71667 11.5 7.47917 11.5958 7.2875 11.7875C7.09583 11.9792 7 12.2167 7 12.5C7 12.7833 7.09583 13.0208 7.2875 13.2125C7.47917 13.4042 7.71667 13.5 8 13.5ZM5 21.5C4.45 21.5 3.97917 21.3042 3.5875 20.9125C3.19583 20.5208 3 20.05 3 19.5V5.5C3 4.95 3.19583 4.47917 3.5875 4.0875C3.97917 3.69583 4.45 3.5 5 3.5H19C19.55 3.5 20.0208 3.69583 20.4125 4.0875C20.8042 4.47917 21 4.95 21 5.5V19.5C21 20.05 20.8042 20.5208 20.4125 20.9125C20.0208 21.3042 19.55 21.5 19 21.5H5Z" fill="#4caf4f"/>
+          </svg>
+        </span>
+        <span class="layer-name">Select all</span>
+      </label>
+
+      <button id="deleteBtn" class="btn" title="Delete selected layers" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+          <path d="M10 11v6M14 11v6"></path>
+          <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        Delete selected (<span id="selCount">0</span>)
+      </button>
+    </div>
+
+    <div id="empty" class="empty" style="display:none;">
+      Select a frame/group/layer and click <b>Scan</b> to list top-level hidden layers (components &amp; instances are ignored).
+    </div>
+
+    <div id="list" class="list"></div>
+  </div>
+
+  <script>
+    const listEl = document.getElementById('list');
+    const emptyEl = document.getElementById('empty');
+    const scanBtn = document.getElementById('scanBtn');
+    const scanBtnLabel = document.getElementById('scanBtnLabel');
+
+    const selectAllWrap = document.getElementById('selectAllWrap');
+    const chkAll = document.getElementById('chkAll');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const selCountEl = document.getElementById('selCount');
+
+    let currentLayers = []; // [{id,name}]
+    let selectedIds = new Set();
+
+    // gate: only enable Select-all after the user actively scans
+    let hasUserScanned = false;
+    let scannedOnce = false; // controls Scan→Rescan label after user scan
+
+    function escapeHtml(s){ return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    const escapeAttr = escapeHtml;
+
+    // --- core UI state sync ---
+    function updateSelectionUI(){
+      const count = selectedIds.size;
+      const allCount = currentLayers.length;
+
+      selCountEl.textContent = String(count);
+      deleteBtn.disabled = count === 0;
+
+      // Only enable after the user clicked Scan AND there are 2+ items
+      const enableSelectAll = hasUserScanned && allCount >= 2;
+      chkAll.disabled = !enableSelectAll;
+      selectAllWrap.classList.toggle('is-disabled', !enableSelectAll);
+
+      if (!enableSelectAll) {
+        chkAll.checked = false;
+        chkAll.indeterminate = false;
+        return;
+      }
+
+      // Tri-state when enabled
+      const allSelected   = allCount > 0 && count === allCount;
+      const noneSelected  = count === 0;
+      chkAll.checked = allSelected;
+      chkAll.indeterminate = !noneSelected && !allSelected;
+    }
+
+    function updateScanButtonLabel(){
+      scanBtnLabel.textContent = scannedOnce ? 'Rescan' : 'Scan';
+      scanBtn.title = scannedOnce ? 'Rescan selection' : 'Scan selection';
+    }
+
+    function renderLayers(payload){
+      const { layers = [] } = payload || {};
+      currentLayers = layers.slice();
+      selectedIds = new Set();
+
+      if (!layers.length){
+        listEl.innerHTML = '';
+        emptyEl.style.display = '';
+        updateSelectionUI();
+        return;
+      }
+      emptyEl.style.display = 'none';
+
+      const html = layers.map(item => `
+        <div class="layer-row" data-id="${item.id}" title="${escapeAttr(item.name)}">
+          <div class="layer-left">
+            <label class="chk-wrap">
+              <input class="chk" type="checkbox" data-id="${item.id}" aria-label="Select ${escapeAttr(item.name)}" />
+              <span class="chk-icon" aria-hidden="true">
+                <!-- Unchecked -->
+                <svg class="icon-unchecked" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5ZM5 19H19V5H5V19Z" fill="#000"/>
+                </svg>
+                <!-- Checked -->
+                <svg class="icon-checked" viewBox="0 0 24 24" fill="none">
+                  <path d="M10.6 13.4L8.45 11.25C8.26667 11.0667 8.03333 10.975 7.75 10.975C7.46667 10.975 7.23333 11.0667 7.05 11.25C6.86667 11.4333 6.775 11.6667 6.775 11.95C6.775 12.2333 6.86667 12.4667 7.05 12.65L9.9 15.5C10.1 15.7 10.3333 15.8 10.6 15.8C10.8667 15.8 11.1 15.7 11.3 15.5L16.95 9.85C17.1333 9.66667 17.225 9.43333 17.225 9.15C17.225 8.86667 17.1333 8.63333 16.95 8.45C16.7667 8.26667 16.5333 8.175 16.25 8.175C15.9667 8.175 15.7333 8.26667 15.55 8.45L10.6 13.4ZM5 21C4.45 21 3.97917 20.8042 3.5875 20.4125C3.19583 20.0208 3 19.55 3 19V5C3 4.45 3.19583 3.97917 3.5875 3.5875C3.97917 3.19583 4.45 3 5 3H19C19.55 3 20.0208 3.19583 20.4125 3.5875C20.8042 3.97917 21 4.45 21 5V19C21 19.55 20.8042 20.0208 20.4125 20.4125C20.0208 20.8042 19.55 21 19 21H5Z" fill="#4caf4f"/>
+                </svg>
+              </span>
+              <span class="layer-name">${escapeHtml(item.name)}</span>
             </label>
+          </div>
+
+          <button class="target-btn" aria-label="Focus ${escapeAttr(item.name)}" data-id="${item.id}" title="Focus">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="7"></circle>
+              <line x1="12" y1="1" x2="12" y2="5"></line>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="1" y1="12" x2="5" y2="12"></line>
+              <line x1="19" y1="12" x2="23" y2="12"></line>
+              <circle cx="12" cy="12" r="1.5"></circle>
+            </svg>
+          </button>
         </div>
+      `).join('');
 
-        <ul id="layer-list" style="display: none;">
-            <!-- Layer items will be dynamically inserted here -->
-        </ul>
-        <div id="empty-state" style="display: none;">
-            <p>Please select a frame, section, or group to start.</p>
-        </div>
-    </div>
+      listEl.innerHTML = html;
 
-    <div class="footer">
-        <div class="button-group">
-            <button id="search-button" class="button">Search Selection</button>
-            <button id="delete-selected-button" class="button" disabled>Delete Selected</button>
-        </div>
-        <div class="footer-meta">
-            <span class="team-name">JustGo UX Team</span>
-            <span class="version">v2.0.1 Beta</span>
-        </div>
-    </div>
+      // After rendering, sync controls (uses hasUserScanned + currentLayers length)
+      updateSelectionUI();
+    }
 
-    <script>
-        const layerList = document.getElementById('layer-list');
-        const statusText = document.getElementById('status');
-        const emptyState = document.getElementById('empty-state');
-        const searchButton = document.getElementById('search-button');
-        const deleteSelectedButton = document.getElementById('delete-selected-button');
-        const selectAllCheckbox = document.getElementById('select-all');
-        const listControls = document.getElementById('list-controls');
+    // ---- Events ----
 
-        function updateDeleteButtonState() {
-            const selectedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
-            deleteSelectedButton.disabled = selectedCheckboxes.length === 0;
-        }
+    // Scan/Rescan click → ask backend to search (and mark that user scanned)
+    scanBtn.addEventListener('click', () => {
+      hasUserScanned = true;                        // gate for Select-all
+      parent.postMessage({ pluginMessage: { type: 'search-again' } }, '*');
+    });
 
-        function updateSelectAllCheckboxState() {
-            const allCheckboxes = layerList.querySelectorAll('.layer-checkbox');
-            const checkedCheckboxes = layerList.querySelectorAll('.layer-checkbox:checked');
-            if (allCheckboxes.length === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checkedCheckboxes.length === allCheckboxes.length) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checkedCheckboxes.length === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            } else {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = true;
-            }
-           // Force redraw for custom checkbox
-           const checkmark = selectAllCheckbox.parentElement.querySelector('.checkmark');
-           if (selectAllCheckbox.indeterminate) {
-               selectAllCheckbox.classList.add('indeterminate');
-               // Forcibly set indeterminate property for custom styling
-               checkmark.querySelector('.check').style.display = 'none';
-               checkmark.querySelector('.dash').style.display = 'block';
-           } else if (selectAllCheckbox.checked) {
-               selectAllCheckbox.classList.remove('indeterminate');
-               checkmark.querySelector('.check').style.display = 'block';
-               checkmark.querySelector('.dash').style.display = 'none';
-           } else {
-               selectAllCheckbox.classList.remove('indeterminate');
-               checkmark.querySelector('.check').style.display = 'none';
-               checkmark.querySelector('.dash').style.display = 'none';
-           }
-        }
+    // Delete selected layers (send IDs to plugin)
+    deleteBtn.addEventListener('click', () => {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      deleteBtn.disabled = true;
+      parent.postMessage({ pluginMessage: { type: 'delete-selected', ids } }, '*');
+    });
 
-        onmessage = (event) => {
-            const msg = event.data.pluginMessage;
-            if (msg.type === 'render-layers') {
-                layerList.innerHTML = '';
-                selectAllCheckbox.checked = false;
-                if (msg.layers.length > 0) {
-                    emptyState.style.display = 'none';
-                    listControls.style.display = 'block';
-                    layerList.style.display = 'block';
-                    const layerText = msg.layers.length === 1 ? 'layer' : 'layers';
-                    statusText.textContent = `Found ${msg.layers.length} hidden ${layerText} ${msg.scope}`;
-                    msg.layers.forEach(layer => {
-                        const listItem = document.createElement('li');
-                        listItem.className = 'layer-item';
-                        listItem.dataset.layerId = layer.id;
-                        listItem.innerHTML = `
-                            <span class="custom-checkbox">
-                                <input type="checkbox" class="layer-checkbox">
-                                <span class="checkmark">
-                                    <svg class="check" viewBox="0 0 20 20"><polyline points="5 11 9 15 15 7"/></svg>
-                                    <svg class="dash" viewBox="0 0 20 20"><line x1="5" y1="10" x2="15" y2="10"/></svg>
-                                </span>
-                            </span>
-                            <span class="layer-name" title="${layer.name}">${layer.name}</span>
-                        `;
-                        layerList.appendChild(listItem);
-                    });
-                } else {
-                    statusText.textContent = `No hidden layers found in your selection.`;
-                    layerList.style.display = 'none';
-                    listControls.style.display = 'none';
-                    emptyState.style.display = 'block';
-                    emptyState.querySelector('p').textContent = '👍 No hidden layers found.';
-                }
-                updateDeleteButtonState();
-            } else if (msg.type === 'prompt-selection') {
-                statusText.textContent = 'Ready to search';
-                layerList.style.display = 'none';
-                listControls.style.display = 'none';
-                emptyState.style.display = 'block';
-                emptyState.querySelector('p').textContent = 'Please select a frame, section, or group to start.';
-                updateDeleteButtonState();
-            }
-        };
+    // Select All (tri-state)
+    chkAll.addEventListener('change', () => {
+      if (chkAll.disabled) return; // guard
+      const allCount = currentLayers.length;
+      if (!allCount) {
+        chkAll.checked = false;
+        chkAll.indeterminate = false;
+        return;
+      }
+      if (chkAll.checked) {
+        selectedIds = new Set(currentLayers.map(l => l.id));
+        listEl.querySelectorAll('.chk').forEach(ch => (ch.checked = true));
+      } else {
+        selectedIds.clear();
+        listEl.querySelectorAll('.chk').forEach(ch => (ch.checked = false));
+      }
+      updateSelectionUI();
+    });
 
-        layerList.addEventListener('click', (event) => {
-            const target = event.target;
-            const listItem = target.closest('.layer-item');
-            if (!listItem) return;
+    // Per-row checkbox changes
+    listEl.addEventListener('change', (e) => {
+      const chk = e.target.closest('.chk');
+      if (!chk) return;
+      const id = chk.dataset.id;
+      if (!id) return;
 
-            const layerId = listItem.dataset.layerId;
+      if (chk.checked) selectedIds.add(id);
+      else selectedIds.delete(id);
 
-            if (target.classList.contains('icon') || target.classList.contains('layer-name')) {
-                parent.postMessage({ pluginMessage: { type: 'zoom-to-layer', id: layerId }}, '*');
-            } else {
-                const checkbox = listItem.querySelector('.layer-checkbox');
-                if (checkbox) {
-                    if (target.type !== 'checkbox') {
-                        checkbox.checked = !checkbox.checked;
-                    }
-                    listItem.classList.toggle('selected', checkbox.checked);
-                    updateDeleteButtonState();
-                    updateSelectAllCheckboxState();
-                }
-            }
-        });
+      updateSelectionUI();
+    });
 
-        selectAllCheckbox.addEventListener('change', () => {
-            const checkboxes = layerList.querySelectorAll('.layer-checkbox');
-            for (let i = 0; i < checkboxes.length; i++) {
-                const checkbox = checkboxes[i];
-                checkbox.checked = selectAllCheckbox.checked;
-                const listItem = checkbox.closest('.layer-item');
-                if (listItem) {
-                    listItem.classList.toggle('selected', selectAllCheckbox.checked);
-                }
-            }
-            updateDeleteButtonState();
-        });
+    // ONLY target icon triggers focus/zoom
+    listEl.addEventListener('click', (e) => {
+      const targetBtn = e.target.closest('.target-btn');
+      if (!targetBtn) return;
+      const id = targetBtn.dataset.id;
+      if (!id) return;
+      parent.postMessage({ pluginMessage: { type: 'zoom-to-layer', id } }, '*');
+    });
 
-        searchButton.addEventListener('click', () => {
-            statusText.textContent = 'Searching...';
-            parent.postMessage({ pluginMessage: { type: 'search-again' }}, '*');
-        });
+    // ---- Bridge from plugin ----
+    window.onmessage = (event) => {
+      const msg = event.data && event.data.pluginMessage;
+      if (!msg) return;
 
-        deleteSelectedButton.addEventListener('click', () => {
-            const selectedIds = Array.from(layerList.querySelectorAll('.layer-checkbox:checked'))
-                                     .map(cb => cb.closest('.layer-item').dataset.layerId);
-            parent.postMessage({ pluginMessage: { type: 'delete-selected', ids: selectedIds }}, '*');
-        });
-    </script>
+      if (msg.type === 'render-layers') {
+        if (hasUserScanned) scannedOnce = true;
+        updateScanButtonLabel();
+        renderLayers(msg);  // also calls updateSelectionUI()
+      }
+
+      if (msg.type === 'prompt-selection') {
+        renderLayers({ layers: [] });
+        if (!hasUserScanned) scannedOnce = false;
+        updateScanButtonLabel();
+      }
+    };
+
+    // Init (first load: Select-all disabled, label "Scan")
+    chkAll.disabled = true;
+    chkAll.checked = false;
+    chkAll.indeterminate = false;
+    selectAllWrap.classList.add('is-disabled');
+
+    function updateScanButtonLabel(){
+      scanBtnLabel.textContent = scannedOnce ? 'Rescan' : 'Scan';
+      scanBtn.title = scannedOnce ? 'Rescan selection' : 'Scan selection';
+    }
+
+    emptyEl.style.display = '';
+    updateScanButtonLabel();
+    updateSelectionUI();
+  </script>
 </body>
 </html>
