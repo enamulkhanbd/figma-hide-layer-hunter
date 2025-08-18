@@ -140,20 +140,25 @@ figma.ui.onmessage = (msg) => {
   }
 
   if (msg.type === 'delete-selected' && Array.isArray(msg.ids)) {
-    let deletedCount = 0;
+    const deletedIds = [];
     for (const id of msg.ids) {
       const n = figma.getNodeById(id);
       if (n && !n.removed) {
         try {
           n.remove();
-          deletedCount++;
+          deletedIds.push(id);
         } catch (err) {
           // ignore nodes that cannot be removed
         }
       }
     }
-    figma.notify(`Deleted ${deletedCount} layer(s).`);
-    findHiddenLayers(); // refresh after deletion
+    if (deletedIds.length) {
+      figma.notify(`Deleted ${deletedIds.length} layer(s).`);
+      // Preserve UI state: tell the UI exactly which rows to remove, do NOT rescan.
+      figma.ui.postMessage({ type: 'deleted-ids', ids: deletedIds });
+    } else {
+      figma.notify('Nothing to delete.');
+    }
   }
 
   if (msg.type === 'search-again') {
