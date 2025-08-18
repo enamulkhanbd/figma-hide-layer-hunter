@@ -1,15 +1,14 @@
 /**
  * Hidden Layer Finder
- * - Multi-select + Select all / Clear selection + Delete selected
- * - Focus/zoom triggers ONLY from target icon (UI). Row click does nothing.
- * - First run: UI shows "Scan"; after first successful scan, UI flips to "Rescan".
+ * - Multi-select + Select all / Delete selected
+ * - Focus/zoom triggers ONLY from target icon (UI)
+ * - First run: UI shows "Scan"; after first successful scan, flips to "Rescan"
  * - Skips COMPONENT / INSTANCE / COMPONENT_SET subtrees
  */
 
 figma.showUI(__html__, { width: 340, height: 520 });
 
-// -------------------- helpers --------------------
-
+// ---------- helpers ----------
 function isComponentish(node) {
   return (
     node.type === 'COMPONENT' ||
@@ -17,7 +16,6 @@ function isComponentish(node) {
     node.type === 'INSTANCE'
   );
 }
-
 function hasChildren(node) {
   return 'children' in node && Array.isArray(node.children);
 }
@@ -35,7 +33,7 @@ function collectHiddenNonComponentNodes(roots) {
 
     if ('visible' in node && node.visible === false) {
       hidden.push(node);
-      continue;
+      continue; // parent hidden → no need to descend
     }
 
     if (hasChildren(node)) {
@@ -44,7 +42,6 @@ function collectHiddenNonComponentNodes(roots) {
       }
     }
   }
-
   return hidden;
 }
 
@@ -102,8 +99,7 @@ function trySelectNode(node) {
   }
 }
 
-// -------------------- core search --------------------
-
+// ---------- scan ----------
 function findHiddenLayers() {
   const selection = figma.currentPage.selection;
 
@@ -112,10 +108,12 @@ function findHiddenLayers() {
     return;
   }
 
+  // hidden among selected roots
   const hiddenSelected = selection.filter(
     n => !isComponentish(n) && 'visible' in n && n.visible === false
   );
 
+  // hidden among descendants
   const hiddenDesc = collectHiddenNonComponentNodes(selection);
 
   const allHidden = [...hiddenSelected, ...hiddenDesc];
@@ -123,14 +121,19 @@ function findHiddenLayers() {
 
   const layers = topHidden.map(n => ({ id: n.id, name: n.name }));
 
-  figma.ui.postMessage({
-    type: 'render-layers',
-    layers
-  });
+  // Send to UI
+  figma.ui.postMessage({ type: 'render-layers', layers });
+
+  // NEW: toast how many found (with pluralization)
+  const count = layers.length;
+  if (count === 0) {
+    figma.notify('No hidden layers found in the current selection.');
+  } else {
+    figma.notify(`Found ${count} hidden layer${count === 1 ? '' : 's'}.`);
+  }
 }
 
-// -------------------- UI bridge --------------------
-
+// ---------- UI bridge ----------
 figma.ui.onmessage = (msg) => {
   if (!msg) return;
 
@@ -155,7 +158,7 @@ figma.ui.onmessage = (msg) => {
     if (deletedIds.length) {
       const n = deletedIds.length;
       figma.notify(`Deleted ${n} layer${n === 1 ? '' : 's'}.`);
-      // Preserve UI state: tell the UI exactly which rows to remove, do NOT rescan.
+      // Preserve UI state: remove only those rows, do NOT rescan.
       figma.ui.postMessage({ type: 'deleted-ids', ids: deletedIds });
     } else {
       figma.notify('Nothing to delete.');

@@ -178,6 +178,9 @@
     let hasUserScanned = false;
     let scannedOnce = false; // controls Scan→Rescan label
 
+    const EMPTY_HINT = 'Select a frame/group/layer and click <b>Scan</b> to list top-level hidden layers (components &amp; instances are ignored).';
+    function setEmpty(html) { emptyEl.innerHTML = html; }
+
     function escapeHtml(s){ return (s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     const escapeAttr = escapeHtml;
 
@@ -216,6 +219,7 @@
 
       if (!layers.length){
         listEl.innerHTML = '';
+        setEmpty('No hidden layers found in the current selection.');
         emptyEl.style.display = '';
         updateSelectionUI();
         return;
@@ -331,6 +335,7 @@
 
       if (msg.type === 'prompt-selection') {
         renderLayers({ layers: [] });
+        setEmpty(EMPTY_HINT);
         if (!hasUserScanned) scannedOnce = false;
         updateScanButtonLabel();
       }
@@ -343,7 +348,10 @@
           const row = listEl.querySelector(`.layer-row[data-id="${(id+'').replace(/"/g,'\\"')}"]`);
           if (row) row.remove();
         });
-        if (currentLayers.length === 0) emptyEl.style.display = '';
+        if (currentLayers.length === 0) {
+          setEmpty('No hidden layers found in the current selection.');
+          emptyEl.style.display = '';
+        }
         updateSelectionUI();
       }
     };
@@ -351,6 +359,7 @@
     // Init: Select-all disabled, label "Scan", show hint
     chkAll.disabled = true; chkAll.checked = false; chkAll.indeterminate = false;
     selectAllWrap.classList.add('is-disabled');
+    setEmpty(EMPTY_HINT);
     updateScanButtonLabel();
     emptyEl.style.display = '';
     updateSelectionUI();
