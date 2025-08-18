@@ -1,105 +1,190 @@
 /**
- * @name Hide Layer Hunter 2.0 - Code
- * @description This is the "backend" of the plugin. It finds hidden layers
- * and communicates with the UI.
+ * Hidden Layer Finder
+ * - Shows top-level hidden layers in the current selection.
+ * - Skips COMPONENT / COMPONENT_SET (masters).
+ * - Includes hidden INSTANCE nodes, but never lists anything inside an instance.
+ * - Focus/zoom via target icon only.
+ * - “Scan” → “Rescan” after first successful search.
+ * - UI state preserved on delete (UI receives only the deleted IDs).
  */
 
-// Show the UI when the plugin is run.
-figma.showUI(__html__, { width: 280, height: 450 });
+figma.showUI(__html__, { width: 340, height: 520 });
 
-// --- Function to find hidden layers ---
+/* ------------------------ helpers ------------------------ */
+
+function isMasterComponent(node) {
+  return node.type === 'COMPONENT' || node.type === 'COMPONENT_SET';
+}
+function hasChildren(node) {
+  return 'children' in node && Array.isArray(node.children);
+}
+function hasInstanceAncestor(node) {
+  let p = node.parent;
+  while (p && p.type !== 'PAGE') {
+    if (p.type === 'INSTANCE') return true;
+    p = p.parent;
+  }
+  return false;
+}
+
+/**
+ * Collect hidden nodes from roots with rules:
+ *  - Skip COMPONENT / COMPONENT_SET completely.
+ *  - For INSTANCE:
+ *      * If hidden => include the INSTANCE itself.
+ *      * Never descend into its children.
+ *  - For other nodes:
+ *      * If hidden => include it and do not descend.
+ *      * Else descend into children (and apply same rules).
+ */
+function collectHiddenNodesRespectingInstances(roots) {
+  const hidden = [];
+  const stack = [...roots];
+
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || node.removed) continue;
+
+    if (isMasterComponent(node)) continue;
+
+    if ('visible' in node && node.visible === false) {
+      hidden.push(node);
+      continue;
+    }
+
+    if (node.type === 'INSTANCE') {
+      // visible instance: neither list it nor descend
+      continue;
+    }
+
+    if (hasChildren(node)) {
+      for (const child of node.children) stack.push(child);
+    }
+  }
+  return hidden;
+}
+
+/** keep only nodes without a hidden ancestor in the same set */
+function toTopLevelHidden(nodes) {
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const ids = new Set(byId.keys());
+  const out = [];
+
+  for (const node of byId.values()) {
+    let isTop = true;
+    let p = node.parent;
+    while (p && p.type !== 'PAGE') {
+      if (ids.has(p.id)) { isTop = false; break; }
+      p = p.parent;
+    }
+    if (isTop) out.push(node);
+  }
+  return out;
+}
+
+function closestVisibleAncestor(node) {
+  let p = node;
+  while (p && p.type !== 'PAGE') {
+    if (!('visible' in p) || p.visible) return p;
+    p = p.parent;
+  }
+  return figma.currentPage;
+}
+
+function trySelectNode(node) {
+  if (!node || node.removed) {
+    figma.notify('Layer no longer exists.');
+    return { selected: false };
+  }
+  const beforeSel = figma.currentPage.selection.slice();
+  figma.currentPage.selection = [node];
+
+  const ok = figma.currentPage.selection.length === 1 &&
+             figma.currentPage.selection[0].id === node.id;
+
+  if (ok) {
+    figma.viewport.scrollAndZoomIntoView([node]);
+    return { selected: true };
+  } else {
+    figma.currentPage.selection = beforeSel;
+    const focus = closestVisibleAncestor(node);
+    figma.viewport.scrollAndZoomIntoView([focus]);
+    figma.notify('Cannot select hidden/locked layer. Focused its parent instead.', { timeout: 2000 });
+    return { selected: false };
+  }
+}
+
+/* ------------------------ scan ------------------------ */
+
 function findHiddenLayers() {
   const selection = figma.currentPage.selection;
 
-  // If nothing is selected, send a message to the UI to show a prompt.
   if (selection.length === 0) {
     figma.ui.postMessage({ type: 'prompt-selection' });
-    return; // Stop the function here.
-  }
-  
-  // If something is selected, proceed with the search.
-  const searchNodes = selection;
-  const scopeDescription = "in your selection";
-  
-  // Use a standard for-loop which is more robust than reduce/flatMap with the Figma API.
-  let allExplicitlyHidden = [];
-  for (const node of searchNodes) {
-      const found = node.findAll(n => !n.visible && n.type !== 'COMPONENT' && n.type !== 'INSTANCE');
-      for (const item of found) {
-          allExplicitlyHidden.push(item);
-      }
+    return;
   }
 
-  const hiddenSelectedNodes = searchNodes.filter(n =>
-    !n.visible && n.type !== 'COMPONENT' && n.type !== 'INSTANCE' && n.id !== figma.currentPage.id
+  // Hidden among selected roots (no masters; ignore inner items of instances)
+  const hiddenSelected = selection.filter(n =>
+    !isMasterComponent(n) &&
+    'visible' in n &&
+    n.visible === false &&
+    !hasInstanceAncestor(n)
   );
 
-  const allHiddenNodes = [...hiddenSelectedNodes, ...allExplicitlyHidden];
-  const uniqueHiddenNodesMap = new Map(allHiddenNodes.map(node => [node.id, node]));
-  
-  const hiddenIds = new Set(uniqueHiddenNodesMap.keys());
+  // Hidden among descendants (respect instance boundary)
+  const hiddenDesc = collectHiddenNodesRespectingInstances(selection);
 
-  const topLevelHiddenLayers = [];
-  for (const node of uniqueHiddenNodesMap.values()) {
-    let isTopLevel = true;
-    let parent = node.parent;
-    
-    while (parent && parent.id !== figma.currentPage.id) {
-      if (hiddenIds.has(parent.id)) {
-        isTopLevel = false;
-        break;
-      }
-      parent = parent.parent;
-    }
+  const allHidden = [...hiddenSelected, ...hiddenDesc];
+  const topHidden = toTopLevelHidden(allHidden);
 
-    if (isTopLevel) {
-      topLevelHiddenLayers.push(node);
-    }
-  }
-
-  const layerData = topLevelHiddenLayers.map(layer => ({
-    id: layer.id,
-    name: layer.name
+  const layers = topHidden.map(n => ({
+    id: n.id,
+    name: n.name,
+    isInstance: n.type === 'INSTANCE'
   }));
 
-  figma.ui.postMessage({
-    type: 'render-layers',
-    layers: layerData,
-    scope: scopeDescription
-  });
+  figma.ui.postMessage({ type: 'render-layers', layers });
+
+  const count = layers.length;
+  if (count === 0) {
+    figma.notify('No hidden layers found in the current selection.');
+  } else {
+    figma.notify(`Found ${count} hidden layer${count === 1 ? '' : 's'}.`);
+  }
 }
 
-// --- Listen for messages from the UI ---
-figma.ui.onmessage = msg => {
-  if (msg.type === 'zoom-to-layer') {
-    const nodeToZoom = figma.getNodeById(msg.id);
-    if (nodeToZoom) {
-      const previousSelection = figma.currentPage.selection;
-      figma.currentPage.selection = [nodeToZoom];
-      figma.viewport.scrollAndZoomIntoView([nodeToZoom]);
-      setTimeout(() => {
-        figma.currentPage.selection = previousSelection;
-      }, 500); // 0.5 second highlight
+/* ------------------------ UI bridge ------------------------ */
+
+figma.ui.onmessage = (msg) => {
+  if (!msg) return;
+
+  if (msg.type === 'zoom-to-layer' && msg.id) {
+    const node = figma.getNodeById(msg.id);
+    trySelectNode(node);
+  }
+
+  if (msg.type === 'delete-selected' && Array.isArray(msg.ids)) {
+    const deletedIds = [];
+    for (const id of msg.ids) {
+      const n = figma.getNodeById(id);
+      if (n && !n.removed) {
+        try {
+          n.remove();
+          deletedIds.push(id);
+        } catch (err) { /* older runtime needs a binding */ }
+      }
     }
-  } else if (msg.type === 'search-again') {
-    findHiddenLayers();
-  } else if (msg.type === 'delete-selected') {
-    const idsToDelete = msg.ids;
-    if (idsToDelete && idsToDelete.length > 0) {
-        let deletedCount = 0;
-        idsToDelete.forEach(id => {
-            const nodeToDelete = figma.getNodeById(id);
-            if (nodeToDelete && !nodeToDelete.removed) {
-                nodeToDelete.remove();
-                deletedCount++;
-            }
-        });
-        figma.notify(`Deleted ${deletedCount} layer(s).`);
-        findHiddenLayers();
+    if (deletedIds.length) {
+      const n = deletedIds.length;
+      figma.notify(`Deleted ${n} layer${n === 1 ? '' : 's'}.`);
+      figma.ui.postMessage({ type: 'deleted-ids', ids: deletedIds });
+    } else {
+      figma.notify('Nothing to delete.');
     }
   }
-};
 
-// --- Initial run ---
-// Run the check as soon as the plugin starts.
-findHiddenLayers();
+  if (msg.type === 'search-again') {
+    findHiddenLayers();
+  }
+};
