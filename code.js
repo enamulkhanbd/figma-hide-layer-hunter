@@ -153,7 +153,8 @@ figma.ui.onmessage = (msg) => {
       }
     }
     if (deletedIds.length) {
-      figma.notify(`Deleted ${deletedIds.length} layer(s).`);
+      const n = deletedIds.length;
+      figma.notify(`Deleted ${n} layer${n === 1 ? '' : 's'}.`);
       // Preserve UI state: tell the UI exactly which rows to remove, do NOT rescan.
       figma.ui.postMessage({ type: 'deleted-ids', ids: deletedIds });
     } else {
