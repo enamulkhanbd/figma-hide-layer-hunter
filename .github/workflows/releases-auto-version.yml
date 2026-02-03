@@ -1,0 +1,259 @@
+name: Auto-version + update RELEASES.md + tag
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - "RELEASES.md"
+
+permissions:
+  contents: write
+
+jobs:
+  version-and-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute release slug
+        id: release_slug
+        run: |
+          echo "slug=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version + collect release notes
+        id: compute
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          # Latest tag like v1.2.3 (fallback if none)
+          LAST_TAG="$(git tag --list 'v*' --sort=-v:refname | head -n 1 || true)"
+          [ -z "${LAST_TAG}" ] && LAST_TAG="v0.0.0"
+          echo "last_tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
+
+          # Subjects since last tag (or all history if first release)
+          if [ "${LAST_TAG}" = "v0.0.0" ]; then
+            SUBJECTS="$(git log --format=%s)"
+          else
+            SUBJECTS="$(git log --format=%s "${LAST_TAG}..HEAD")"
+          fi
+
+          # Decide bump priority: major > minor > patch
+          BUMP="none"
+          echo "${SUBJECTS}" | grep -E '^Breaking:' >/dev/null 2>&1 && BUMP="major" || true
+          if [ "${BUMP}" = "none" ]; then
+          echo "${SUBJECTS}" | grep -E '^Releases?:' >/dev/null 2>&1 && BUMP="minor" || true
+          fi
+          if [ "${BUMP}" = "none" ]; then
+            echo "${SUBJECTS}" | grep -E '^Fix:' >/dev/null 2>&1 && BUMP="patch" || true
+          fi
+          echo "bump=${BUMP}" >> "$GITHUB_OUTPUT"
+
+          # Collect "Release:" / "Releases:" lines for RELEASES.md
+          NOTES="$(echo "${SUBJECTS}" | grep -E '^Releases?:' || true)"
+          if [ -z "${NOTES}" ]; then
+            echo "found_releases=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found_releases=true" >> "$GITHUB_OUTPUT"
+            echo "${NOTES}" | sed -E 's/^Releases?:\s*/- /' > .releases_bullets.txt
+          fi
+
+          # Parse last tag vX.Y.Z and bump
+          V="${LAST_TAG#v}"
+          IFS='.' read -r MA MI PA <<< "$V"
+          MA="${MA:-0}"; MI="${MI:-0}"; PA="${PA:-0}"
+
+          case "${BUMP}" in
+            major) MA=$((MA+1)); MI=0; PA=0 ;;
+            minor) MI=$((MI+1)); PA=0 ;;
+            patch) PA=$((PA+1)) ;;
+            none)  ;;
+          esac
+
+          NEW_TAG="v${MA}.${MI}.${PA}"
+          echo "new_tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Stop if no version bump detected
+        if: ${{ steps.compute.outputs.bump == 'none' }}
+        run: |
+          echo "No Breaking:/Release(s):/Fix: commits since last tag. Skipping."
+
+      - name: Check commit for release skip flag
+        id: skip_release
+        shell: bash
+        run: |
+          set -euo pipefail
+          MSG="$(git log -1 --pretty=%B)"
+          if echo "${MSG}" | grep -q '\[no release\]'; then
+            echo "skip_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update RELEASES.md
+        if: ${{ steps.compute.outputs.bump != 'none' && steps.compute.outputs.found_releases == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.compute.outputs.new_tag }}"
+          HEADER="## ${TAG}"
+
+          # Create file if missing
+          if [ ! -f RELEASES.md ]; then
+            echo "# Releases" > RELEASES.md
+            echo "" >> RELEASES.md
+          fi
+
+          FIRST_LINE="$(head -n 1 RELEASES.md || true)"
+          TMP="$(mktemp)"
+
+          if [[ "${FIRST_LINE}" == "# Releases" ]]; then
+            {
+              head -n 2 RELEASES.md
+              echo "${HEADER}"
+              cat .releases_bullets.txt
+              echo ""
+              tail -n +3 RELEASES.md
+            } > "${TMP}"
+          else
+            {
+              echo "${HEADER}"
+              cat .releases_bullets.txt
+              echo ""
+              cat RELEASES.md
+            } > "${TMP}"
+          fi
+
+          mv "${TMP}" RELEASES.md
+
+      - name: Commit RELEASES.md (if changed)
+        if: ${{ steps.compute.outputs.bump != 'none' && steps.compute.outputs.found_releases == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add RELEASES.md
+          git diff --cached --quiet && exit 0
+
+          git commit -m "chore: update RELEASES.md [skip ci]"
+          git push
+
+      - name: Create and push Git tag
+        if: ${{ steps.compute.outputs.bump != 'none' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.compute.outputs.new_tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Avoid re-tagging if tag exists
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists. Skipping."
+            exit 0
+          fi
+
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+
+      - name: Package release zip from manifest.json
+        if: ${{ steps.compute.outputs.bump != 'none' && steps.skip_release.outputs.skip_release == 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.compute.outputs.new_tag }}"
+          MAIN=$(node -p "require('./manifest.json').main || ''")
+          UI=$(node -p "require('./manifest.json').ui || ''")
+
+          if [ -z "$MAIN" ] || [ -z "$UI" ]; then
+            echo "manifest.json must include both 'main' and 'ui' -> found main='$MAIN', ui='$UI'"
+            exit 1
+          fi
+
+          for f in manifest.json "$MAIN" "$UI"; do
+            if [ ! -f "$f" ]; then
+              echo "Missing required file: $f"
+              exit 1
+            fi
+          done
+
+          rm -rf release
+          mkdir -p release
+
+          cp manifest.json release/
+          mkdir -p "release/$(dirname "$MAIN")" "release/$(dirname "$UI")"
+          cp "$MAIN" "release/$MAIN"
+          cp "$UI" "release/$UI"
+
+          # Only ship manifest-referenced files + optional assets folder.
+          [ -d assets ] && cp -R assets release/ || true
+
+          SLUG="${{ steps.release_slug.outputs.slug }}"
+          ZIP="${SLUG}-${TAG}.zip"
+          (cd release && zip -r "../$ZIP" .)
+
+          echo "Created $ZIP"
+
+      - name: Build release notes (from RELEASES.md if available)
+        if: ${{ steps.compute.outputs.bump != 'none' && steps.skip_release.outputs.skip_release == 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.compute.outputs.new_tag }}"
+          LAST_TAG="${{ steps.compute.outputs.last_tag }}"
+
+          # Default body: commit subjects since last tag
+          if git rev-parse "${LAST_TAG}" >/dev/null 2>&1; then
+            git log --format='- %s' "${LAST_TAG}..HEAD" > .commit_notes.txt
+          else
+            git log --format='- %s' > .commit_notes.txt
+          fi
+
+          if [ ! -s .commit_notes.txt ]; then
+            echo "- Release created by CI" > .commit_notes.txt
+          fi
+
+          {
+            echo "${TAG}"
+            echo ""
+            cat .commit_notes.txt
+          } > release_notes.txt
+
+          [ -f RELEASES.md ] || exit 0
+
+          # Extract lines after "## vX.Y.Z" until next "## "
+          awk -v header="## ${TAG}" '
+            $0 == header {found=1; next}
+            found && /^## / {exit}
+            found {print}
+          ' RELEASES.md > extracted.txt || true
+
+          if [ -s extracted.txt ]; then
+            {
+              echo "${TAG}"
+              echo ""
+              cat extracted.txt
+            } > release_notes.txt
+          fi
+
+      - name: Create GitHub Release and upload zip
+        if: ${{ steps.compute.outputs.bump != 'none' && steps.skip_release.outputs.skip_release == 'false' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.compute.outputs.new_tag }}
+          name: ${{ steps.compute.outputs.new_tag }}
+          body_path: release_notes.txt
+          files: |
+            ${{ steps.release_slug.outputs.slug }}-*.zip

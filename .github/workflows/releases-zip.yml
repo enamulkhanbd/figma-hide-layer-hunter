@@ -1,0 +1,97 @@
+name: Build release zip + GitHub Release (from manifest.json)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute release slug
+        id: release_slug
+        run: |
+          echo "slug=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Package release zip from manifest.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MAIN=$(node -p "require('./manifest.json').main || ''")
+          UI=$(node -p "require('./manifest.json').ui || ''")
+
+          if [ -z "$MAIN" ] || [ -z "$UI" ]; then
+            echo "manifest.json must include both 'main' and 'ui' -> found main='$MAIN', ui='$UI'"
+            exit 1
+          fi
+
+          for f in manifest.json "$MAIN" "$UI"; do
+            if [ ! -f "$f" ]; then
+              echo "Missing required file: $f"
+              exit 1
+            fi
+          done
+
+          rm -rf release
+          mkdir -p release
+
+          cp manifest.json release/
+          mkdir -p "release/$(dirname "$MAIN")" "release/$(dirname "$UI")"
+          cp "$MAIN" "release/$MAIN"
+          cp "$UI" "release/$UI"
+
+          # Only ship manifest-referenced files + optional assets folder.
+          [ -d assets ] && cp -R assets release/ || true
+
+          TAG="${GITHUB_REF_NAME}"
+          SLUG="${{ steps.release_slug.outputs.slug }}"
+          ZIP="${SLUG}-${TAG}.zip"
+          (cd release && zip -r "../$ZIP" .)
+
+          echo "Created $ZIP"
+
+      - name: Build release notes (from RELEASES.md if available)
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+
+          # Default body if RELEASES.md missing or section not found
+          {
+            echo "${TAG}"
+            echo ""
+            echo "- Release created by CI"
+          } > release_notes.txt
+
+          [ -f RELEASES.md ] || exit 0
+
+          # Extract lines after "## vX.Y.Z" until next "## "
+          awk -v header="## ${TAG}" '
+            $0 == header {found=1; next}
+            found && /^## / {exit}
+            found {print}
+          ' RELEASES.md > extracted.txt || true
+
+          if [ -s extracted.txt ]; then
+            {
+              echo "${TAG}"
+              echo ""
+              cat extracted.txt
+            } > release_notes.txt
+          fi
+
+      - name: Create GitHub Release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.txt
+          files: |
+            ${{ steps.release_slug.outputs.slug }}-*.zip
